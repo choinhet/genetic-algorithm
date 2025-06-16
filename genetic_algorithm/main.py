@@ -1,6 +1,21 @@
 import random
 import string
-from functools import partial
+import time
+from functools import partial, wraps
+
+
+def timeit(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        name = func.__name__
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"Func {name} took {end - start:.2f} seconds")
+        return result
+
+    return wrapper
+
 
 def get_random_phrase(k: int) -> str:
     return "".join(random.choices(string.printable, k=k))
@@ -38,14 +53,21 @@ def get_points(expected: str, current: str) -> int:
     return points
 
 
-def main():
-    expected = "I'm a cool pass phrase"
+@timeit
+def math_solve(expected: str):
+    full = ""
+    for i in range(len(expected)):
+        cur_target = expected[i]
+        for c in string.printable:
+            if c == cur_target:
+                full += c
+                break
+    print(f"Math Solve finished. Final answer: {full}")
+
+
+@timeit
+def ga_solve(expected: str):
     expected_len = len(expected)
-    pool = len(string.printable) * len(expected)
-
-    print(f"Target is: '{expected}' - {pool} options")
-    print("")
-
     points = partial(get_points, expected)
 
     pop_size, mut_size, cross_size, rand_size, max_gens = 5000, 400, 400, 400, 500
@@ -55,14 +77,14 @@ def main():
 
     random_population.sort(key=points, reverse=True)
     best = points(random_population[0])
-    print(f"Initial best: '{random_population[0]}' - {best} points")
-    print("Starting...")
-    print("")
+    # print(f"Initial best: '{random_population[0]}' - {best} points")
+    # print("Starting...")
+    # print("")
 
     gens = 0
     for _ in range(max_gens):
         best = points(random_population[0])
-        print(f"Current best: '{random_population[0]}' - {best} points - Gen: {gens}")
+        # print(f"Current best: '{random_population[0]}' - {best} points - Gen: {gens}")
         gens += 1
         keep_pop = random_population[keep_size:]
         new_pop = []
@@ -88,9 +110,19 @@ def main():
         if best == expected_len:
             break
 
+    print(f"Final best: '{random_population[0]}' - {best} points - Generation: {gens}")
+
+
+def main():
+    expected = "I'm a cool pass phrase and I'm really big"
+    pool = len(string.printable) * len(expected)
+
+    print(f"Target is: '{expected}' - {pool} options")
     print("")
-    print(f"Final best: '{random_population[0]}' - {best} points")
-    print(f"Took {gens} generations")
+
+    ga_solve(expected)
+    print("")
+    math_solve(expected)
 
 
 if __name__ == "__main__":
