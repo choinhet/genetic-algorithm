@@ -1,20 +1,9 @@
+import logging
 import random
 import string
-import time
-from functools import partial, wraps
+from functools import partial
 
-
-def timeit(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        name = func.__name__
-        start = time.time()
-        result = func(*args, **kwargs)
-        end = time.time()
-        print(f"Func {name} took {end - start:.2f} seconds")
-        return result
-
-    return wrapper
+from genetic_algorithm.service import GeneticAlgorithm
 
 
 def get_random_phrase(k: int) -> str:
@@ -28,7 +17,7 @@ def get_random_segment(size: int, pct: float = 0.2) -> tuple[int, int]:
     return start, end
 
 
-def mutate(phrase: str, pct: float = 0.2) -> str:
+def mutate(phrase: str, pct: float = 0.4) -> str:
     size = len(phrase)
     mutation_size = round(size * pct)
     start, end = get_random_segment(size, pct)
@@ -53,76 +42,25 @@ def get_points(expected: str, current: str) -> int:
     return points
 
 
-@timeit
-def math_solve(expected: str):
-    full = ""
-    for i in range(len(expected)):
-        cur_target = expected[i]
-        for c in string.printable:
-            if c == cur_target:
-                full += c
-                break
-    print(f"Math Solve finished. Final answer: {full}")
-
-
-@timeit
-def ga_solve(expected: str):
-    expected_len = len(expected)
-    points = partial(get_points, expected)
-
-    pop_size, mut_size, cross_size, rand_size, max_gens = 5000, 400, 400, 400, 500
-    keep_size = pop_size - (mut_size + cross_size + rand_size)
-
-    random_population = [get_random_phrase(expected_len) for _ in range(pop_size)]
-
-    random_population.sort(key=points, reverse=True)
-    best = points(random_population[0])
-    # print(f"Initial best: '{random_population[0]}' - {best} points")
-    # print("Starting...")
-    # print("")
-
-    gens = 0
-    for _ in range(max_gens):
-        best = points(random_population[0])
-        # print(f"Current best: '{random_population[0]}' - {best} points - Gen: {gens}")
-        gens += 1
-        keep_pop = random_population[keep_size:]
-        new_pop = []
-
-        for i in range(mut_size):
-            cur = random_population[i]
-            new_pop.append(mutate(cur, 0.3))
-
-        for i in range(cross_size):
-            cur_0 = random_population[i]
-            cur_1 = random_population[i + 1]
-            new_pop.append(cross_over(cur_0, cur_1))
-
-        for i in range(rand_size):
-            new_pop.append(get_random_phrase(expected_len))
-
-        keep_pop.extend(new_pop)
-        random_population = keep_pop
-
-        random_population.sort(key=points, reverse=True)
-        best = points(random_population[0])
-
-        if best == expected_len:
-            break
-
-    print(f"Final best: '{random_population[0]}' - {best} points - Generation: {gens}")
-
-
 def main():
-    expected = "I'm a cool pass phrase and I'm really big"
-    pool = len(string.printable) * len(expected)
+    logging.basicConfig(level=logging.INFO)
+    
+    expected = "I'm a cool pass phrase"
 
-    print(f"Target is: '{expected}' - {pool} options")
-    print("")
+    fit_func = partial(get_points, expected)
+    random_func = partial(get_random_phrase, len(expected))
 
-    ga_solve(expected)
-    print("")
-    math_solve(expected)
+    ga = GeneticAlgorithm(
+        random_func=random_func,
+        mut_func=mutate,
+        cross_func=cross_over,
+        fit_func=fit_func,
+        stop_score=len(expected),
+        verbose=True,
+    )
+
+    end_pop = ga.run()
+    ...
 
 
 if __name__ == "__main__":
