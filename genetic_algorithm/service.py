@@ -30,6 +30,22 @@ class GeneticAlgorithm(Generic[T]):
             save_local_db: bool = True,
             local_db_table_name: str = "population",
     ):
+        """
+        :param random_func: A function that generates a parameter of type [T]
+        :param mut_func: A function that accepts a parameter of type [T] and returns another object of type [T]
+        :param cross_func: A function that accepts two parameters of type [T] and returns another object of type [T]
+        :param fit_func: A function that takes [T] and returns an integer - describing the score, bigger is better
+        :param pop_size: Size of the population
+        :param mut_size:  Size of the population that will be replaced by mutation
+        :param cross_size: Size of the population that will be replaced by cross over
+        :param rand_size: Size of the population that will be replaced by random generation
+        :param max_gens: Maximum number of generations
+        :param stop_score: Target score to stop before generations hit the maximum amount
+        :param verbose: Logs information about the process, for each generation
+        :param save_local_db: Creates a duckdb database locally with all created data
+        :param local_db_table_name: Name of the local duckdb table
+        """
+
         self.stop_score = stop_score
         self.verbose = verbose
         self.save_local_db = save_local_db
@@ -37,7 +53,7 @@ class GeneticAlgorithm(Generic[T]):
         self.conn: Optional[duckdb.DuckDBPyConnection] = None
         if self.save_local_db:
             self.conn = duckdb.connect("population.duckdb")
-           
+
         self.table_name = local_db_table_name
 
         self.random_func = random_func
