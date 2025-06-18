@@ -2,6 +2,9 @@ import logging
 import time
 from typing import Generic, TypeVar, Callable, List, Optional
 
+import duckdb
+import pandas as pd
+
 from genetic_algorithm.models import Unit
 
 T = TypeVar("T")
@@ -24,9 +27,18 @@ class GeneticAlgorithm(Generic[T]):
             max_gens: int = 500,
             stop_score: Optional[int] = None,
             verbose: bool = False,
+            save_local_db: bool = True,
+            local_db_table_name: str = "population",
     ):
         self.stop_score = stop_score
         self.verbose = verbose
+        self.save_local_db = save_local_db
+
+        self.conn: Optional[duckdb.DuckDBPyConnection] = None
+        if self.save_local_db:
+            self.conn = duckdb.connect("population.duckdb")
+           
+        self.table_name = local_db_table_name
 
         self.random_func = random_func
         self.mut_func = mut_func
@@ -61,6 +73,13 @@ class GeneticAlgorithm(Generic[T]):
                 score=self.fit_func(current_content),
             )
             self.population.append(current_unit)
+
+    def _save_to_db(self):
+        df = pd.DataFrame([unit.model_dump() for unit in self.population])
+        if self.conn is None:
+            raise Exception("Could not find a valid local database to save information")
+        self.conn.execute(f"CREATE TABLE IF NOT EXISTS {self.table_name} AS SELECT * FROM df LIMIT 0")
+        self.conn.execute(f"INSERT INTO {self.table_name} SELECT * FROM df")
 
     def run(self) -> List[Unit[T]]:
         start_time = time.time()
@@ -111,6 +130,9 @@ class GeneticAlgorithm(Generic[T]):
             if self.verbose:
                 elapsed = time.time() - start_time
                 log.info(f"Generation: {idx}; Max Score: {max_score}; Current: {first.content}; Elapsed: {elapsed:.2f}s")
+
+            if self.save_local_db:
+                self._save_to_db()
 
             if self.stop_score and max_score >= self.stop_score:
                 log.info(f"Stop score reached")

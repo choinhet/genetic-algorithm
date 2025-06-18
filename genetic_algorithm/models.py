@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal, TypeVar, Generic
 
 from pydantic import BaseModel, Field
@@ -10,3 +11,4 @@ class Unit(BaseModel, Generic[T]):
     generation: int = Field(default=0)
     score: int = Field(default=0)
     origin: Literal["mutation", "cross_over", "random"] = Field(default="random")
+    timestamp: datetime = Field(default_factory=datetime.now)
